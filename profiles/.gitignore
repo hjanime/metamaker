@@ -1,0 +1,3 @@
+# Only allow profile files here
+*
+!*.mmp
