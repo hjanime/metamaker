@@ -48,7 +48,7 @@ class MetaMaker( threading.Thread ):
                          'template':None,
                          'template_dir':'../profiles',
                          }
-        self._progress = -1
+        self._progress = 0
     
     def _get_tax_from_id(self, project_id):
         """
@@ -81,8 +81,8 @@ class MetaMaker( threading.Thread ):
         term = "%s[Organism Kingdom]" % self.settings['taxa']
         handle = Entrez.esearch("genome", term = term, retmax = max)
         results = Entrez.read(handle)
-        self.log.info('Found %i %s' % (len(results['IdList']), 
-                                       self.settings['taxa']))
+        self.log.info(' + Found %i %s' % (len(results['IdList']), 
+                                          self.settings['taxa']))
         return results['IdList']
     
     def _list(self):
@@ -131,6 +131,7 @@ class MetaMaker( threading.Thread ):
         ids = self._list()
         last = 0
         i = 0
+        self.log.info("Making dataset")
         while i < self.settings['num_genomes']:
             genome_id = random.choice(ids)
             
@@ -252,7 +253,6 @@ class MetaMaker( threading.Thread ):
         if self.settings['template']:
             self._load_template( self.settings['template'] )
         
-        self.log.info("Making dataset")
         dataset = self._make_dataset()
         
         # Print debug information about the dataset
@@ -277,6 +277,7 @@ class MetaMaker( threading.Thread ):
         # Start creating the fastq output file.
         out = open(self.settings['outfile'], 'w')
         for metadata in dataset:
+            self._progress = 0.0
             
             self.log.info("* Parsing %s" % metadata['def'])
             self.log.info("  * Downloading")
@@ -320,6 +321,7 @@ class MetaMaker( threading.Thread ):
                 break
         
         out.close()
+        self._progress = -1
         self.log.info("Finished. All went well!")
     
     def set(self, key, value):

@@ -68,10 +68,32 @@ class MetaMakerGUI(object):
             """
             Appends log message to the console.
             """
-            formattedMessage = "%s\n" % self.format(message)
+            formattedMessage = "\n%s" % self.format(message)
             
             self.console.configure(state=NORMAL)
             self.console.insert(END, formattedMessage)
+            self.console.configure(state=DISABLED)
+            self.console.see(END)
+        
+        def progress(self, value):
+            """
+            Formats and prints a progress indicator as a percentage.
+            """
+            if value <= 0:
+                return
+            
+            formattedMessage = "[%5.2f%%]" % (100*value)
+            
+            self.console.configure(state=NORMAL)
+            
+            index = "%.0f" % (float(self.console.index("end"))-1)
+            index += ".80"
+            # pad with whitespace
+            self.console.insert(index, " "*80)
+            # delete till we're where we want to be
+            self.console.delete(index, END)
+            # insert progress
+            self.console.insert(index, formattedMessage)
             self.console.configure(state=DISABLED)
             self.console.see(END)
         
@@ -197,6 +219,7 @@ class MetaMakerGUI(object):
         app.set('taxa', self.taxa.get())
         app.set('template_dir', 'profiles')
         app.start()
+        self.gui.after(500, self.update_progress, app) 
     
     def run(self):
         """
@@ -204,6 +227,13 @@ class MetaMakerGUI(object):
         """
         self.gui.mainloop()
     
+    def update_progress(self, app):
+        progress = app.progress()
+        for handler in self.log.handlers:
+            if getattr(handler, 'progress', False):
+                handler.progress(progress)
+        if progress != -1:
+            self.gui.after(100, self.update_progress, app)
 
 if __name__ == '__main__':
     
