@@ -9,6 +9,7 @@ simulating a sequencing run.
 
 import os
 import sys
+import time
 import numpy
 import random
 import logging
@@ -42,10 +43,12 @@ class MetaMaker( threading.Thread ):
                          'quality mean':[25],
                          'quality var':[10],
                          'distribution':'uniform',
+                         'progress':False,
                          'log':'MetaMaker',
                          'template':None,
                          'template_dir':'../profiles',
                          }
+        self._progress = -1
     
     def _get_tax_from_id(self, project_id):
         """
@@ -210,6 +213,12 @@ class MetaMaker( threading.Thread ):
             
         return output
     
+    def progress(self):
+        """
+        Returns the progress of the current action.
+        """
+        return self._progress
+    
     @staticmethod
     def get_templates(return_format = None, template_dir = '../profiles'):
         """
@@ -284,7 +293,7 @@ class MetaMaker( threading.Thread ):
                     self.log.info("    * Retrying")
                     pass
             
-            self.log.info("  * Creating %i Reads" % metadata['reads'])
+            self.log.info("  * Creating Reads" )
             
             for record in SeqIO.parse(data,"gb"):
                 # TODO: make use of several records if present
@@ -296,9 +305,9 @@ class MetaMaker( threading.Thread ):
                     
                     # apply quality to read
                     seq = list(seq)
-                    for i, q in enumerate(quality):
+                    for j, q in enumerate(quality):
                         if numpy.random.random() < (10**-((ord(q)-33)/10.0)):
-                            seq[i] = 'actg'[numpy.random.randint(4)]
+                            seq[j] = 'actg'[numpy.random.randint(4)]
                     seq = "".join(seq)
                     header = "@%s|ref:%s-%i|pos:%i-%i\n" % (record.id, 
                                                         metadata['genome_id'],
@@ -307,6 +316,7 @@ class MetaMaker( threading.Thread ):
                     out.write(header)
                     out.write("%s\n" % seq)
                     out.write("+\n%s\n" % quality)
+                    self._progress = (i+1)/float(int(metadata['reads']))
                 break
         
         out.close()
@@ -351,6 +361,8 @@ if __name__ == '__main__':
                         default = [0],
                         help=("Factors for the error variance approximation "
                               "equation.") )
+    parser.add_argument("-p", "--progress", default=False,
+                        help="Display progress information for long tasks.")
     parser.add_argument("-t", "--template", default=None,
                         help=("Sequencing template to use for read generation. "
                               "Overrides reads, basepairs, readlength and "
@@ -389,15 +401,15 @@ if __name__ == '__main__':
     
     log.addHandler(console_handler)
     
-    
     app = MetaMaker( args.output, args.number_of_genomes )
     app.set('keyfile',      args.keyfile)
     app.set('taxa',         args.taxa)
     app.set('reads',        args.reads)
     app.set('basepairs',    args.basepairs)
-    app.set('readlength',   args.readlength)
-    app.set('error_func',   args.error_function)
+    app.set('read length',  args.readlength)
+    app.set('quality mean', args.error_function)
     app.set('distribution', args.distribution)
     app.set('template',     args.template)
+    app.set('progress',     args.progress)
     
     app.run()
