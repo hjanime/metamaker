@@ -156,8 +156,6 @@ class DataParser( threading.Thread ):
             if i and self.settings.get('progress'):
                 if not self.settings['progress'] % i:
                     self.log.info("  parsed %i/%i records" % (i, records))
-            if i > 999:
-                break
     
     def run(self):
         """
