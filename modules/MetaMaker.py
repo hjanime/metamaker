@@ -34,7 +34,7 @@ class MetaMaker( threading.Thread ):
         threading.Thread.__init__(self)
         self.settings = {'num_genomes':num_genomes,
                          'outfile':"%s.fastq" % outfile,
-                         'keyfile':"%s.key" % outfile,
+                         'keyfile':None,
                          'taxa':'viruses',
                          'reads':1000,
                          'basepairs':200000,
@@ -147,7 +147,9 @@ class MetaMaker( threading.Thread ):
             
             tax_id = self._get_tax_from_id(summary['ProjectID'])
             if not tax_id:
-                continue
+                tax_id = '-'
+                if self.settings['keyfile']:
+                    continue
             
             data = {'genome_id':genome_id, 'def':summary['DefLine'], 
                     'project':summary['ProjectID'], 
@@ -265,6 +267,7 @@ class MetaMaker( threading.Thread ):
         
         # Create the key file
         if self.settings['keyfile']:
+            self.log.info('Creating Key file')
             with open(self.settings['keyfile'], 'w') as key:
                 key.write('Genome ID\tTax ID\tDefinition\tProject\tNo. Reads\n')
                 for i in dataset:
@@ -346,7 +349,7 @@ if __name__ == '__main__':
     parser.add_argument("-o", "--output", help="Output fastq filename",
                         default="meta_output")
     parser.add_argument("-k", "--keyfile", help="key filename.",
-                        default="meta_output.key")
+                        default=None)
     parser.add_argument("-r", "--reads", help="Number of reads.",
                         default="50M")
     parser.add_argument("-b", "--basepairs", help="Total number of basepairs.",

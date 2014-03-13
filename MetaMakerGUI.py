@@ -35,6 +35,7 @@ a pool of randomly selected genomes downloaded from ENTREZ. The system uses
 Sanger quality values (Phred+33) according to
 http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2847217/?tool=pubmed. The second 
 file is a "key file", a csv-file with summary information about the dataset.
+(If no filename is given, no key-file will be created)
 
 ================================================================================
 
@@ -87,7 +88,7 @@ class MetaMakerGUI(object):
             self.console.configure(state=NORMAL)
             
             index = "%.0f" % (float(self.console.index("end"))-1)
-            index += ".80"
+            index += ".72"
             # pad with whitespace
             self.console.insert(index, " "*80)
             # delete till we're where we want to be
@@ -95,7 +96,6 @@ class MetaMakerGUI(object):
             # insert progress
             self.console.insert(index, formattedMessage)
             self.console.configure(state=DISABLED)
-            self.console.see(END)
         
     class RunTimeFormatter(logging.Formatter):
         """
@@ -127,7 +127,7 @@ class MetaMakerGUI(object):
         """
         self.gui = Tk()
         self.gui.wm_title("%s v. %s" % (self.__name__, self.__version__))
-        self.gui.wm_minsize(800, 600)
+        self.gui.wm_minsize(700, 600)
         self._create_layout()
         self._start_log()
     
@@ -167,13 +167,18 @@ class MetaMakerGUI(object):
         self.filename.insert(0, "MetaMaker_output")
         self.filename.grid(row=4, column=1)
         
+        Label(self.gui, text="Key filename:").grid(row=4, column=2)
+        self.keyname = Entry(self.gui)
+        self.keyname.insert(0, "MetaMaker_output")
+        self.keyname.grid(row=4, column=3)
+        
         # Start button
         self.start = Button(self.gui, text="Generate", command=self.generate)
-        self.start.grid(row=5, column=1)
+        self.start.grid(row=5, column=3)
         
         # Logging console
-        self.console = Text(self.gui, height=26, width=113, name="console")
-        self.console.grid(row=10, column=0, columnspan=3)
+        self.console = Text(self.gui, height=26, width=100, name="console")
+        self.console.grid(row=10, column=0, columnspan=4)
         self.console.insert(END, __doc__)
     
     def _start_log(self):
