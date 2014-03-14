@@ -48,6 +48,8 @@ class MetaMaker( threading.Thread ):
                          'template':None,
                          'template_dir':'../profiles',
                          }
+        self.quality_cache = []
+        self.variance_cache = []
         self._progress = 0
     
     def _get_tax_from_id(self, project_id):
@@ -203,14 +205,18 @@ class MetaMaker( threading.Thread ):
         This might be re-written in the future using Biopythons QualityIO,
         http://www.biopython.org/DIST/docs/api/Bio.SeqIO.QualityIO-module.html
         """
-        f = numpy.poly1d(self.settings['quality mean'])
-        v = numpy.poly1d(self.settings['quality var'])
         
         output = ""
         for i, q in enumerate(seq):
+            if len(self.quality_cache) <= i:
+                f = numpy.poly1d(self.settings['quality mean'])
+                self.quality_cache += [f(len(self.quality_cache))]
+            if len(self.variance_cache) <= i:
+                v = numpy.poly1d(self.settings['quality var'])
+                self.variance_cache += [v(len(self.variance_cache))]
             
-            quality = f(i)
-            quality += numpy.random.normal(0, numpy.sqrt(v(i)))
+            quality = self.quality_cache[i]
+            quality += numpy.random.normal(0, numpy.sqrt(self.variance_cache[i]))
             quality = min(93, max(int(quality), 0))
             output += "%c" % (33+quality)
             
