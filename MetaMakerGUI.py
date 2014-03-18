@@ -108,11 +108,10 @@ class MetaMakerGUI(object):
             """
             Formats a millisecond time as HH:MM:SS.mm.
             """
-            ms = msecs%1e3
-            s = msecs/1e3%60
-            m = msecs/6e4%60
-            h = msecs/36e4%24
-            return "%02i:%02i:%02i.%02.f" % (h, m, s, ms/10)
+            s = msecs/1e3
+            m = s/60
+            h = m/60
+            return "%02i:%02i:%02i.%02.f" % (h%60, m%60, s%60, (msecs%1e3)/10)
         
         def format(self, record):
             """
@@ -219,6 +218,7 @@ class MetaMakerGUI(object):
         
         app = MetaMaker( outfile, no_of_genomes )
         app.set('log', self.__name__)
+        app.set('keyfile', self.keyname.get())
         app.set('distribution', read_distribution)
         app.set('template', self.technology.get())
         app.set('taxa', self.taxa.get())

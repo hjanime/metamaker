@@ -222,6 +222,19 @@ class MetaMaker( threading.Thread ):
             
         return output
     
+    def _write_csv(self, dataset, separator = ','):
+        """
+        Writes a csv file 
+        """
+        self.log.info('Creating Key file')
+        header = ['Genome ID', 'Tax ID', 'Definition', 'Project', 'No. Reads']
+        with open(self.settings['keyfile'], 'w') as key:
+            key.write( "%s\n" % (separator.join(header)) )
+            for i in dataset:
+                data = [i['genome_id'], i['tax_id'], i['def'], 
+                        i['project'],   i['reads']]
+                key.write( "%s\n" % (separator.join(map(str,data))) )
+        
     def progress(self):
         """
         Returns the progress of the current action.
@@ -273,15 +286,7 @@ class MetaMaker( threading.Thread ):
         
         # Create the key file
         if self.settings['keyfile']:
-            self.log.info('Creating Key file')
-            with open(self.settings['keyfile'], 'w') as key:
-                key.write('Genome ID\tTax ID\tDefinition\tProject\tNo. Reads\n')
-                for i in dataset:
-                    key.write("%s\t%s\t%s\t%s\t%i\n" % (i['genome_id'], 
-                                                        i['tax_id'],
-                                                        i['def'], 
-                                                        i['project'], 
-                                                        i['reads']))
+            self._write_csv(dataset)
         
         # Start creating the fastq output file.
         out = open(self.settings['outfile'], 'w')
@@ -338,7 +343,10 @@ class MetaMaker( threading.Thread ):
         Sets a value in the settings dictionary.
         """
         if key in self.settings:
-            self.settings[key] = value
+            if key == 'keyfile' and not value.endswith('.csv'):
+                self.settings[key] = "%s.csv" % value
+            else:
+                self.settings[key] = value
         else:
             raise Exception("Unknown key '%s' in settings." % key)
     
