@@ -1,3 +1,6 @@
+*.fastq
+*.csv
+
 .DS_Store
 
 *.py[cod]

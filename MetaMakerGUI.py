@@ -145,7 +145,7 @@ class MetaMakerGUI(object):
         Label(self.gui, text="Taxa:").grid(row=1,column=0)
         self.taxa = StringVar(self.gui)
         self.taxa.set("Viruses")
-        drop = OptionMenu(self.gui, self.taxa, "Viruses")
+        drop = OptionMenu(self.gui, self.taxa, "Viruses", "Bacteria")
         drop.grid(row = 1, column = 1)
         
         Label(self.gui, text="Species Distribution:").grid(row=2,column=0)
