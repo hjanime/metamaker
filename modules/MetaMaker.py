@@ -159,10 +159,10 @@ class MetaMaker( threading.Thread ):
             
             # Make sure we have a nucleotide id to download the data later.
             nuc_id = None
-            project_term = "%s[BioProject]" % summary['ProjectID']
+            search_term = "%s[Organism] complete genome" % summary['Organism_Name']
             try:
                 project_data = Entrez.read(Entrez.esearch("nucleotide", 
-                                                          project_term))
+                                                          search_term))
                 nuc_id = project_data['IdList'][0]
             except Exception as e:
                 self.log.debug("   - Failed: no nuc id")
