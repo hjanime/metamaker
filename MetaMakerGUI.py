@@ -28,7 +28,7 @@ Technology: The system will attempt to approximate the output from the chosen
             from real data.
 
 Output filename: The output filename to use. The filename will be appended with
-                 ".fastq" and ".key" for the individual output files.
+                 ".fastq" and ".csv" for the individual output files.
 
 The system will produce two output files, a fastq file of simulated reads from 
 a pool of randomly selected genomes downloaded from ENTREZ. The system uses 

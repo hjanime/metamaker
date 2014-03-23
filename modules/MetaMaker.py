@@ -52,35 +52,30 @@ class MetaMaker( threading.Thread ):
         self.variance_cache = []
         self._progress = 0
     
-    def _get_tax_from_id(self, project_id):
+    def _get_tax_id(self, data):
         """
-        Attempts to get taxonomic id from NCBI, given a sequencing project id.
+        Attempts to get taxonomic id from NCBI, given some data.
         """
-        project_term = "%s[BioProject]" % project_id
-        tax_id = None
-        self.log.debug('Asking NCBI for "%s" to get tax id.' % project_term)
+        organism = data['Organism_Name']
         for retries in xrange(5):
             try:
-                nuc_data = Entrez.read(Entrez.esearch("nucleotide", project_term))
-                nuc_id = nuc_data['IdList'][0]
-                summary = Entrez.read(Entrez.esummary(db="nucleotide", id=nuc_id))
-                tax_id = summary[0]['TaxId']
-                break
+                search = Entrez.read(Entrez.esearch('taxonomy', organism))
+                data   = Entrez.read(Entrez.esummary(db='taxonomy',
+                                                     id=search['IdList'][0]))
+                if data[0]['ScientificName'] != organism:
+                    raise Exception("Something went wrong in the search!")
+                return data[0]['TaxId']
             except Exception as e:
                 pass
-        if tax_id:
-            self.log.debug('Tax id found (%s)' % tax_id)
-        else:
-            self.log.debug('Tax id not found')
         
-        return tax_id
+        return None
     
     def _list_ncbi(self, max = 10000):
         """
         Lists (searches) NCBI entries for the specified taxa.
         """
         self.log.info('Getting list of %s from NCBI' % self.settings['taxa'])
-        term = "%s[Organism Kingdom]" % self.settings['taxa']
+        term = "%s[Organism]" % self.settings['taxa']
         handle = Entrez.esearch("genome", term = term, retmax = max)
         results = Entrez.read(handle)
         self.log.info(' + Found %i %s' % (len(results['IdList']), 
@@ -135,7 +130,11 @@ class MetaMaker( threading.Thread ):
         i = 0
         self.log.info("Making dataset")
         while i < self.settings['num_genomes']:
-            genome_id = random.choice(ids)
+            if ids:
+                genome_id = random.choice(ids)
+                ids.remove(genome_id)
+            else:
+                raise Exception('Not enough genomes.')
             
             new = True
             for prev in dataset:
@@ -146,15 +145,35 @@ class MetaMaker( threading.Thread ):
                 continue
             
             summary = Entrez.read(Entrez.esummary(db="genome", id=genome_id))[0]
+            self.log.debug(" + Trying: %s" % summary['Organism_Name'])
             
-            tax_id = self._get_tax_from_id(summary['ProjectID'])
-            if not tax_id:
-                tax_id = '-'
-                if self.settings['keyfile']:
+            
+            # Get a taxonomy id if we're printing a key-file
+            tax_id = '-'
+            if self.settings['keyfile']:
+                tax_id = self._get_tax_id(summary)
+                if not tax_id:
+                    self.log.debug("   - Failed: no tax id")
                     continue
             
+            
+            # Make sure we have a nucleotide id to download the data later.
+            nuc_id = None
+            project_term = "%s[BioProject]" % summary['ProjectID']
+            try:
+                project_data = Entrez.read(Entrez.esearch("nucleotide", 
+                                                          project_term))
+                nuc_id = project_data['IdList'][0]
+            except Exception as e:
+                self.log.debug("   - Failed: no nuc id")
+                continue
+                    
+            
+            self.log.info(" * Added %s to dataset" % summary['Organism_Name'])
             data = {'genome_id':genome_id, 'def':summary['DefLine'], 
+                    'organism':summary['Organism_Name'],
                     'project':summary['ProjectID'], 
+                    'nuc_id':nuc_id,
                     'tax_id':tax_id}
             
             if self.settings['distribution'].lower() == 'uniform':
@@ -227,12 +246,12 @@ class MetaMaker( threading.Thread ):
         Writes a csv file 
         """
         self.log.info('Creating Key file')
-        header = ['Genome ID', 'Tax ID', 'Definition', 'Project', 'No. Reads']
+        header = ['Genome ID', 'Tax ID', 'Definition', 'Organism', 'No. Reads']
         with open(self.settings['keyfile'], 'w') as key:
             key.write( "%s\n" % (separator.join(header)) )
             for i in dataset:
                 data = [i['genome_id'], i['tax_id'], i['def'], 
-                        i['project'],   i['reads']]
+                        i['organism'],   i['reads']]
                 key.write( "%s\n" % (separator.join(map(str,data))) )
         
     def progress(self):
@@ -270,6 +289,8 @@ class MetaMaker( threading.Thread ):
         Starts the job of creating a metagenomic sample set.
         """
         self.log = logging.getLogger( self.settings['log'] )
+        self.log.info('output: %s, key-file: %s' % (self.settings['outfile'],
+                                                self.settings['keyfile']) )
         
         if self.settings['template']:
             self._load_template( self.settings['template'] )
@@ -296,15 +317,14 @@ class MetaMaker( threading.Thread ):
             self.log.info("* Parsing %s" % metadata['def'])
             self.log.info("  * Downloading")
             
-            project_term = "%s[BioProject]" % metadata['project']
             for tries in xrange(5):
-                try:
-                    handle = Entrez.esearch("nucleotide", project_term)
-                    nuc_id = Entrez.read(handle)['IdList'][0]
-                    data = Entrez.efetch(db="nucleotide", id=nuc_id, 
+                try: 
+                    data = Entrez.efetch(db="nucleotide", id=metadata['nuc_id'], 
                                          rettype="gb",    retmode="text")
                     break
-                except:
+                except Exception as e:
+                    self.log.warning(e)
+                    self.log.info(project_data)
                     self.log.info("    * Retrying")
                     pass
             
@@ -343,7 +363,7 @@ class MetaMaker( threading.Thread ):
         Sets a value in the settings dictionary.
         """
         if key in self.settings:
-            if key == 'keyfile' and not value.endswith('.csv'):
+            if key == 'keyfile' and value and not value.endswith('.csv'):
                 self.settings[key] = "%s.csv" % value
             else:
                 self.settings[key] = value
@@ -391,7 +411,9 @@ if __name__ == '__main__':
                         help=("Taxonomic identifier of the species to "
                               "download."))
     parser.add_argument("-v", "--verbose", action = "count", default = 0, 
-                        help="Set output Verbosity")
+                        help="Increase output Verbosity")
+    parser.add_argument("-q", "--quiet", action = "count", default = 0, 
+                        help="Decrease output Verbosity")
     
     args = parser.parse_args()
     
@@ -405,7 +427,7 @@ if __name__ == '__main__':
         else:
             exec("args.%s = int(args.%s)" % (arg, arg))
 
-    level = 50-args.verbose*10
+    level = 50-(2+args.verbose-args.quiet)*10
     level = 10 if level < 10 else level
     
     log = logging.getLogger( "MetaMaker" )
