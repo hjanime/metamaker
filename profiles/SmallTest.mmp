@@ -1,0 +1,6 @@
+Key: SmallTest
+Default Reads: 5000
+Read Length Mean: 200
+Read Length Var: 8000
+Quality Mean: [-2.2e-09, 1.8e-06, -0.0005, 0.014, 26.5]
+Quality Var: [-3.0e-05, -0.00047, 47.5]
