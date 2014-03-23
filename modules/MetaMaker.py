@@ -196,16 +196,13 @@ class MetaMaker( threading.Thread ):
         well as the position metadata.
         """
         
-        # I seem to remember some early SOLiD reads being as short as 27bp,
-        # so I'm putting that as a hard limit for short reads. Feel free to
-        # change it if you feel like it though!
-        
         read_length = int(self.settings['read length'])
         stdev       = numpy.sqrt(self.settings['length var'])
-        min_length  = max(int(read_length-stdev), 27)
+        read_length += int(numpy.random.normal(0, stdev))
+        min_length  = read_length
         
-        start = random.randint(0, max(0, read_length-min_length))
-        pos = (start, min(read_length, start + read_length))
+        start = random.randint(0, max(0, len(seq)-min_length))
+        pos = (start, start + read_length)
         self.log.debug('Extracting read between %i-%i (%ibp).' % \
                        (pos[0], pos[1], pos[1]-pos[0]))
         return seq[pos[0]:pos[1]], pos
